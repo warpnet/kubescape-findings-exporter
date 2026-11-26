@@ -100,11 +100,22 @@ tests:
             - --min-severity=medium
             - --page-size=10
             - --cluster-page-size=500
+            - --gateway-access=
             - --feed-interval=24h
             - --epss-url=https://epss.empiricalsecurity.com/epss_scores-current.csv.gz
             - --kev-url=https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
             - --frameworks-url=https://github.com/kubescape/regolibrary/releases/download/v2.0.39/FWName_CID_CName
             - --sections-url=https://github.com/kubescape/regolibrary/releases/download/v2.0.39/frameworks
+  - it: passes the access per gateway, sorted
+    template: deployment.yaml
+    set:
+      gatewayAccess:
+        nginx: public
+        cilium/internal: restricted
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --gateway-access=cilium/internal=restricted,nginx=public
   - it: runs restricted
     template: deployment.yaml
     asserts:

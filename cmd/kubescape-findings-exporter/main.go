@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -26,6 +27,9 @@ func main() {
 	clusterPageSize := flag.Int("cluster-page-size", 500,
 		"objects per list request for the exposure (routes, services, endpointslices, pods, replicasets) and the "+
 			"configuration scan summaries")
+	gatewayAccess := flag.String("gateway-access", "",
+		"comma-separated gateway=public|restricted overriding the derived access, for a firewall or cloud rule "+
+			"outside the cluster; gateway as in the gateway label (Gateway or Service namespace/name, ingress class)")
 	listen := flag.String("listen", ":8080", "address for /metrics and /healthz")
 	feedInterval := flag.Duration("feed-interval", 24*time.Hour,
 		"time between two downloads of the EPSS, KEV, frameworks and sections feeds")
@@ -44,6 +48,19 @@ func main() {
 	if _, ok := severityRanks[*minSeverity]; !ok {
 		slog.Error("invalid --min-severity", "value", *minSeverity)
 		os.Exit(2)
+	}
+
+	access := map[string]string{}
+	for _, v := range strings.Split(*gatewayAccess, ",") {
+		if v = strings.TrimSpace(v); v == "" {
+			continue
+		}
+		gw, acc, _ := strings.Cut(v, "=")
+		if gw == "" || (acc != "public" && acc != "restricted") {
+			slog.Error("invalid --gateway-access, want gateway=public or gateway=restricted", "value", v)
+			os.Exit(2)
+		}
+		access[gw] = acc
 	}
 
 	cfg, err := rest.InClusterConfig()
@@ -68,7 +85,9 @@ func main() {
 		return listManifests(ctx, hc, cfg.Host, *namespace, *pageSize)
 	}
 	cluster := func(ctx context.Context) (Cluster, error) {
-		return listCluster(ctx, hc, cfg.Host, *clusterPageSize)
+		c, err := listCluster(ctx, hc, cfg.Host, *clusterPageSize)
+		c.Access = access
+		return c, err
 	}
 	summaries := func(ctx context.Context) ([]Summary, error) {
 		return listSummaries(ctx, hc, cfg.Host, *clusterPageSize)

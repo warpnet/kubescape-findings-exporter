@@ -7,6 +7,7 @@ import "cmp"
 
 // Exposure is one exposed workload and one entry point. Access is public (LoadBalancer without source ranges),
 // restricted (with source ranges) or unknown (NodePort, or no LoadBalancer Service found for the address).
+// --gateway-access, then the access annotation on the Gateway or the Service, override it.
 type Exposure struct{ Namespace, Workload, Kind, Via, Gateway, Hostname, Access string }
 
 type ObjectMeta struct {
@@ -77,8 +78,15 @@ func (r Route) parentStatus(p Ref) (accepted, resolved bool) {
 	return false, false
 }
 
+// AnnotatedMeta adds the annotations, only for the objects that can carry the access annotation: those of all pods
+// would cost memory for nothing.
+type AnnotatedMeta struct {
+	ObjectMeta
+	Annotations map[string]string `json:"annotations"`
+}
+
 type Gateway struct {
-	Metadata ObjectMeta `json:"metadata"`
+	Metadata AnnotatedMeta `json:"metadata"`
 	Status   struct {
 		Addresses []struct {
 			Value string `json:"value"`
@@ -119,7 +127,7 @@ type Ingress struct {
 }
 
 type Service struct {
-	Metadata ObjectMeta `json:"metadata"`
+	Metadata AnnotatedMeta `json:"metadata"`
 	Spec     struct {
 		Type                     string   `json:"type"`
 		LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges"`
@@ -146,9 +154,24 @@ type Cluster struct {
 	Slices      []EndpointSlice `json:"slices"`
 	Pods        []ObjectMeta    `json:"pods"`
 	ReplicaSets []ObjectMeta    `json:"replicaSets"`
+	// Access overrides the derived access per gateway (as in Exposure.Gateway): a firewall or cloud rule outside the
+	// cluster decides it, and nothing inside shows it.
+	Access map[string]string `json:"-"`
 }
 
 const lblServiceName = "kubernetes.io/service-name"
+
+// annAccess on a Gateway or a LoadBalancer Service sets its access, for a firewall or cloud rule outside the cluster.
+const annAccess = "kubescape-findings-exporter.warpnet.nl/access"
+
+// annotatedAccess returns the object's access annotation, or "" when it has none or one that is not public or
+// restricted.
+func annotatedAccess(m AnnotatedMeta) string {
+	if v := m.Annotations[annAccess]; v == "public" || v == "restricted" {
+		return v
+	}
+	return ""
+}
 
 func key(ns, name string) string { return ns + "/" + name }
 
@@ -213,6 +236,9 @@ func BuildExposure(c Cluster) []Exposure {
 		return kind, name, true
 	}
 	access := func(s Service) string {
+		if v := annotatedAccess(s.Metadata); v != "" {
+			return v
+		}
 		switch {
 		case s.Spec.Type != "LoadBalancer":
 			return "unknown"
@@ -232,6 +258,7 @@ func BuildExposure(c Cluster) []Exposure {
 
 	out := map[Exposure]bool{}
 	expose := func(svcNS, svc, via, gateway string, hostnames []string, acc string) {
+		acc = cmp.Or(c.Access[gateway], acc)
 		if len(hostnames) == 0 {
 			hostnames = []string{""}
 		}
@@ -247,11 +274,13 @@ func BuildExposure(c Cluster) []Exposure {
 	}
 
 	gateways := map[string][]string{}
+	gatewayAccess := map[string]string{}
 	for _, g := range c.Gateways {
 		k := key(g.Metadata.Namespace, g.Metadata.Name)
 		for _, a := range g.Status.Addresses {
 			gateways[k] = append(gateways[k], a.Value)
 		}
+		gatewayAccess[k] = annotatedAccess(g.Metadata)
 	}
 	for _, r := range c.Routes {
 		ns := r.Metadata.Namespace
@@ -267,7 +296,7 @@ func BuildExposure(c Cluster) []Exposure {
 				continue
 			}
 			gw := key(cmp.Or(p.Namespace, ns), p.Name)
-			acc := accessOf(gateways[gw])
+			acc := cmp.Or(gatewayAccess[gw], accessOf(gateways[gw]))
 			for _, rule := range r.Spec.Rules {
 				for _, b := range rule.BackendRefs {
 					if b.Group != "" || (b.Kind != "" && b.Kind != "Service") {

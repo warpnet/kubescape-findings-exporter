@@ -22,6 +22,13 @@ pageSize: 10
 # configuration scan summaries, all namespaces.
 clusterPageSize: 500
 
+# Access per gateway, overriding the one derived from the LoadBalancer Service: for a firewall or cloud rule outside
+# the cluster. Keys as in the gateway label of kubescape_workload_exposure_info (Gateway or Service namespace/name,
+# or ingress class), values public or restricted. For example: {cilium/internal: restricted}
+# Wins over the annotation kubescape-findings-exporter.warpnet.nl/access on a Gateway or LoadBalancer Service, which
+# does the same.
+gatewayAccess: {}
+
 # Exploit data for the CVEs on the cluster and the framework mapping, downloaded from the internet. An empty URL switches that feed off.
 feeds:
   # Time between two downloads. EPSS publishes once a day (around 13:30 UTC), KEV a few times a week.

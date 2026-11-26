@@ -33,6 +33,7 @@ spec:
             - --min-severity={{ .Values.minSeverity }}
             - --page-size={{ .Values.pageSize }}
             - --cluster-page-size={{ .Values.clusterPageSize }}
+            - --gateway-access={{ range $i, $gw := keys .Values.gatewayAccess | sortAlpha }}{{ if $i }},{{ end }}{{ $gw }}={{ index $.Values.gatewayAccess $gw }}{{ end }}
             - --feed-interval={{ .Values.feeds.interval }}
             - --epss-url={{ .Values.feeds.epssURL }}
             - --kev-url={{ .Values.feeds.kevURL }}
