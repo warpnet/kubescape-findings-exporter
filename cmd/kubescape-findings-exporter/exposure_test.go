@@ -101,6 +101,39 @@ func TestExposureRestrictedGateway(t *testing.T) {
 	checkExposure(t, c, Exposure{"app", "web", "Deployment", "GRPCRoute", "cilium/int", "g.example", "restricted"})
 }
 
+// A firewall outside the cluster blocks the public Gateway ext: the override wins, other gateways keep theirs.
+func TestExposureAccessOverride(t *testing.T) {
+	c := cluster(t, route("HTTPRoute", `"metadata": {"namespace": "app", "name": "web"},
+	  "spec": {"hostnames": ["a.example"], "parentRefs": [{"name": "ext", "namespace": "cilium"}],
+	           "rules": [{"backendRefs": [{"name": "web"}]}]}`+status(accepted, "cilium/ext")))
+	c.Access = map[string]string{"cilium/ext": "restricted"}
+	checkExposure(t, c, Exposure{"app", "web", "Deployment", "HTTPRoute", "cilium/ext", "a.example", "restricted"})
+	c.Access = map[string]string{"cilium/int": "restricted"}
+	checkExposure(t, c, Exposure{"app", "web", "Deployment", "HTTPRoute", "cilium/ext", "a.example", "public"})
+}
+
+// The access annotation on the Gateway or on its LoadBalancer Service; an invalid value is ignored, the flag wins.
+func TestExposureAccessAnnotation(t *testing.T) {
+	c := cluster(t, route("HTTPRoute", `"metadata": {"namespace": "app", "name": "web"},
+	  "spec": {"hostnames": ["a.example"], "parentRefs": [{"name": "ext", "namespace": "cilium"}],
+	           "rules": [{"backendRefs": [{"name": "web"}]}]}`+status(accepted, "cilium/ext")))
+	want := func(acc string) Exposure {
+		return Exposure{"app", "web", "Deployment", "HTTPRoute", "cilium/ext", "a.example", acc}
+	}
+	gw, svc := &c.Gateways[0].Metadata, &c.Services[0].Metadata
+	if err := json.Unmarshal([]byte(`{"metadata": {"namespace": "cilium", "name": "ext",
+	  "annotations": {"kubescape-findings-exporter.warpnet.nl/access": "restricted"}}}`), &c.Gateways[0]); err != nil {
+		t.Fatal(err)
+	}
+	checkExposure(t, c, want("restricted"))
+	gw.Annotations[annAccess] = "yes"
+	checkExposure(t, c, want("public"))
+	svc.Annotations = map[string]string{annAccess: "restricted"}
+	checkExposure(t, c, want("restricted"))
+	c.Access = map[string]string{"cilium/ext": "public"}
+	checkExposure(t, c, want("public"))
+}
+
 func TestExposureGatewayWithoutService(t *testing.T) {
 	c := cluster(t, route("TLSRoute", `"metadata": {"namespace": "app", "name": "web"},
 	  "spec": {"hostnames": ["t.example"], "parentRefs": [{"name": "lost", "namespace": "cilium"}],

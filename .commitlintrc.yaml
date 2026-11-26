@@ -1,0 +1,6 @@
+# The conventional rules, with body and footer lines wrapped at 120 characters like the rest of the repository.
+extends:
+  - "@commitlint/config-conventional"
+rules:
+  body-max-line-length: [2, always, 120]
+  footer-max-line-length: [2, always, 120]

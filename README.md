@@ -159,11 +159,14 @@ All series have the value 1 (count them), except the timestamps and `kubescape_p
   EndpointSlices to the pods and their owner (a ReplicaSet to its Deployment). `gateway` is the parent Gateway or the
   Service (`namespace/name`) or the ingress class; `hostname` one route or Ingress hostname (empty without). `access`:
   `public` when the LoadBalancer Service behind it has no `loadBalancerSourceRanges`, `restricted` when it has,
-  `unknown` for NodePort or an address without a LoadBalancer Service. A route only counts for a Gateway that
-  accepted it (`status.parents[].conditions` `Accepted=True`); with `ResolvedRefs=False` its backends in other
-  namespaces (no ReferenceGrant) are left out. Routes attached to a ListenerSet are not followed. Gateways and Ingresses are matched to their
-  LoadBalancer Service by address, so it works for any gateway controller. Services without pod endpoints (the Cilium
-  gateway Services) expose nothing themselves.
+  `unknown` for NodePort or an address without a LoadBalancer Service. A firewall or cloud rule outside the cluster is
+  invisible to it: the annotation `kubescape-findings-exporter.warpnet.nl/access` (`public` or `restricted`) on a
+  Gateway or a LoadBalancer Service sets `access` for what goes through it, and `--gateway-access` (chart:
+  `gatewayAccess`) per `gateway`, before the annotation. A route only counts for a Gateway that accepted it
+  (`status.parents[].conditions` `Accepted=True`); with `ResolvedRefs=False` its backends in other namespaces (no
+  ReferenceGrant) are left out. Routes attached to a ListenerSet are not followed. Gateways and Ingresses are matched
+  to their LoadBalancer Service by address, so it works for any gateway controller. Services without pod endpoints
+  (the Cilium gateway Services) expose nothing themselves.
 - Posture comes from the `WorkloadConfigurationScanSummaries` in all namespaces. `namespace` is the resource's
   (the `kubescape.io/workload-namespace` label), empty for cluster-scoped resources. For an RBAC subject `kind` and
   `name` are the subject and `binding` is `RoleBinding/<name>` or `ClusterRoleBinding/<name>`; empty otherwise.
@@ -197,6 +200,7 @@ series, the others (one per image) the image series.
 | `--min-severity` | `medium` (`negligible`, `low`, `medium`, `high`, `critical`) |
 | `--page-size` | `10` |
 | `--cluster-page-size` | `500` (exposure and posture lists) |
+| `--gateway-access` | empty (`gateway=public\|restricted,...`: overrides `access` per `gateway` label value) |
 | `--listen` | `:8080` (`/metrics`, `/healthz`) |
 | `--feed-interval` | `24h` (after a failed download: retry within the hour) |
 | `--epss-url` | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` (empty: off) |
