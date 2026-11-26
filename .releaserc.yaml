@@ -1,4 +1,6 @@
 ---
+# No release commit: main is protected. The tag is the version; the workflow writes it into the chart at
+# packaging time (helm package --version --app-version), so chart X.Y.Z always ships image X.Y.Z.
 branches:
   - main
 plugins:
@@ -12,14 +14,4 @@ plugins:
           release: patch
   - - '@semantic-release/release-notes-generator'
     - preset: conventionalcommits
-  # Lockstep: chart X.Y.Z always ships image X.Y.Z.
-  - - '@semantic-release/exec'
-    - prepareCmd: >-
-        VERSION=${nextRelease.version} yq -i
-        '.version = strenv(VERSION) | .appVersion = strenv(VERSION) | .appVersion style="double"'
-        chart/Chart.yaml
-  - - '@semantic-release/git'
-    - assets:
-        - chart/Chart.yaml
-      message: 'chore(release): ${nextRelease.version}'
   - '@semantic-release/github'

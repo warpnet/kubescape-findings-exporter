@@ -3,6 +3,6 @@
 apiVersion: v2
 name: kubescape-findings-exporter
 description: Per-CVE and configuration posture Prometheus series from the Kubescape operator scan results.
-# Managed by semantic-release in CI: never edit version or appVersion by hand.
-version: 1.0.0
-appVersion: "1.0.0"
+# Placeholders: the release workflow packages the chart with the release version as version and appVersion.
+version: 0.0.0
+appVersion: "0.0.0"

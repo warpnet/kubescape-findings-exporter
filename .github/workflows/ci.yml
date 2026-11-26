@@ -22,8 +22,8 @@ jobs:
       - run: helm plugin install https://github.com/helm-unittest/helm-unittest --verify=false
       - run: helm unittest chart
 
-  # A merge to main with conventional commits releases a version: semantic-release bumps chart/Chart.yaml, commits and
-  # tags it, and the image and the chart are pushed to GHCR with that version.
+  # A merge to main with conventional commits releases a version: semantic-release tags it and creates the GitHub
+  # release (no commit on main), and the image and the chart are pushed to GHCR with that version.
   release:
     needs: test
     if: github.event_name == 'push'
@@ -46,8 +46,6 @@ jobs:
         run: >-
           npx --yes
           -p semantic-release
-          -p @semantic-release/exec
-          -p @semantic-release/git
           -p conventional-changelog-conventionalcommits
           semantic-release
       - name: Released version
@@ -77,6 +75,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "$GITHUB_TOKEN" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
-          helm package chart
+          helm package chart --version "${{ steps.version.outputs.version }}" --app-version "${{ steps.version.outputs.version }}"
           helm push "kubescape-findings-exporter-${{ steps.version.outputs.version }}.tgz" \
             "oci://ghcr.io/${{ github.repository_owner }}/charts"

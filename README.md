@@ -220,9 +220,10 @@ and trim them to the fields in `cmd/kubescape-findings-exporter/manifest.go`.
 ## Releases
 
 A merge to `main` with [conventional commits](https://www.conventionalcommits.org/) releases a version through
-semantic-release (`.releaserc.yaml`, `.github/workflows/ci.yml`): it pushes the image (amd64 and arm64) to
-`ghcr.io/warpnet/kubescape-findings-exporter` and the chart to `oci://ghcr.io/warpnet/charts`, both with the same
-version. Never edit `version` or `appVersion` in `chart/Chart.yaml`.
+semantic-release (`.releaserc.yaml`, `.github/workflows/ci.yml`): it tags the version and creates the GitHub
+release, without a commit on `main`, and the workflow pushes the image (amd64 and arm64) to
+`ghcr.io/warpnet/kubescape-findings-exporter` and the chart to `oci://ghcr.io/warpnet/charts`, both with that version.
+`version` and `appVersion` in `chart/Chart.yaml` stay `0.0.0`: the chart gets the release version when it is packaged.
 
 ## Contributing
 

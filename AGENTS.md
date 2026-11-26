@@ -37,7 +37,8 @@ request title and commits.
 - **Conventional commits.** Pull requests are squash-merged and the title becomes the commit on `main`: `fix:` releases
   a patch, `feat:` a minor, `feat!:` or `BREAKING CHANGE:` a major; `chore(deps):` (Renovate) a patch, other chores
   nothing.
-- **Never edit `version` or `appVersion` in `chart/Chart.yaml`.** semantic-release sets both to the release version.
+- **Leave `version` and `appVersion` in `chart/Chart.yaml` at `0.0.0`.** The release workflow packages the chart
+  with the release version; nothing commits to `main` but a merged pull request.
 - **No new dependencies** for what the standard library, `client_golang` or `client-go` already do.
 - **Comments say why**, not what. Wrap code comments, Markdown and YAML at 120 characters.
 - **Keep it small.** No abstractions, options or packages for a need that does not exist yet.
