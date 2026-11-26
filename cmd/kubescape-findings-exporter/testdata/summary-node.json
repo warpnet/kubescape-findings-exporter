@@ -1,0 +1,55 @@
+{
+  "metadata": {
+    "name": "node-pool-1-abcde",
+    "namespace": "kubescape",
+    "uid": "15b870ea-f37b-4270-ba46-8e611bb9f342",
+    "resourceVersion": "3",
+    "creationTimestamp": "2026-11-07T03:58:42Z",
+    "labels": {
+      "kubescape.io/workload-api-group": "",
+      "kubescape.io/workload-api-version": "v1",
+      "kubescape.io/workload-kind": "Node",
+      "kubescape.io/workload-name": "pool-1-abcde"
+    },
+    "annotations": {
+      "kubescape.io/report-created-at": "2026-11-09T03:58:02.955064615Z",
+      "kubescape.io/sync-checksum": "5329d7c40a78b41bf55235fb3b7d6061f8aaf6cefeb165a9d7272548a70c3b88",
+      "kubescape.io/wlid": "wlid://cluster-lab/namespace-/node-pool-1-abcde"
+    }
+  },
+  "spec": {
+    "severities": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "unknown": 0
+    },
+    "controls": {
+      "C-0087": {
+        "controlID": "C-0087",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 7
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0273": {
+        "controlID": "C-0273",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 2
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      }
+    }
+  }
+}

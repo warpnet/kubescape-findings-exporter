@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "kce.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  # One exporter at a time: two pods serving the same series would make the PromQL joins on them fail. The short gap
+  # is covered by keep_firing_for on the alerts.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "kce.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kce.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Release.Name }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: exporter
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --namespace={{ include "kce.kubescapeNamespace" . }}
+            - --interval={{ .Values.interval }}
+            - --min-severity={{ .Values.minSeverity }}
+            - --page-size={{ .Values.pageSize }}
+            - --cluster-page-size={{ .Values.clusterPageSize }}
+            - --feed-interval={{ .Values.feeds.interval }}
+            - --epss-url={{ .Values.feeds.epssURL }}
+            - --kev-url={{ .Values.feeds.kevURL }}
+            - --frameworks-url={{ .Values.feeds.frameworksURL }}
+            - --sections-url={{ .Values.feeds.sectionsURL }}
+          env:
+            # The garbage collector works harder near the memory limit instead of the pod being OOM-killed while a
+            # page of large manifests is decoded.
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+          ports:
+            - name: metrics
+              containerPort: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]

@@ -1,0 +1,23 @@
+name: Feature request
+description: A new metric, label, flag or chart option.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What do you want to see or alert on that the exporter does not give you now?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: The metric, labels or option you have in mind. Mind the series count it adds on a large cluster.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Workarounds you use now or other options you considered.

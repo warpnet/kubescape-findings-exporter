@@ -1,0 +1,359 @@
+# The rule groups of the chart's PrometheusRule (templates/prometheusrule.yaml). Not templated by Helm, so the
+# Prometheus templates ({{ $labels.x }}) stay as they are; the template replaces KUBESCAPE_NAMESPACE and GRAFANA_URL.
+# Every expression keeps the cluster label, so one Prometheus can evaluate the data of several clusters. After an
+# exporter restart the old and the new pod serve the same series for a few minutes (they differ only in pod and
+# instance), hence max by on each series' own labels first.
+
+# For the Vulnerabilities dashboard: every loaded CVE with the severity, fix and image of its image series, so the
+# dashboard reads one table instead of joining both in Grafana SQL expressions (that join hits Grafana's input cell
+# limit on a large cluster). group_left fails the rule if a CVE key ever has two severities or fixes; Prometheus'
+# rule evaluation failures show it.
+- name: kubescape-vulnerabilities-dashboard
+  rules:
+    # The digest every container runs now (kube-state-metrics). Kubescape keeps the loaded CVEs of a container's
+    # previous image until it has relevancy data for the new one, so the alerts and the joined series only count
+    # loaded CVEs of a digest that runs: an image update clears its alerts within minutes. A container whose new
+    # image has no relevancy data yet has no loaded CVEs until it has.
+    - record: kubescape:container_digest:running
+      expr: |-
+        max by (cluster, namespace, container, digest) (
+          label_replace(kube_pod_container_info, "digest", "$1", "image_id", ".*(sha256:[0-9a-f]{64}).*")
+        )
+    - record: kubescape:workload_vulnerability_relevant:joined
+      expr: |-
+        (
+          max by (cluster, namespace, workload, container, digest, cve, package, version) (
+            kubescape_workload_vulnerability_relevant{kind=~"Deployment|StatefulSet|DaemonSet"}
+          )
+          and on (cluster, namespace, container, digest) kubescape:container_digest:running
+        )
+        * on (cluster, digest, cve, package, version) group_left (image, tag, severity, fixed_version, fix_state)
+        max by (cluster, digest, cve, package, version, image, tag, severity, fixed_version, fix_state) (
+          kubescape_image_vulnerability
+        )
+
+- name: kubescape-vulnerabilities
+  rules:
+    # One alert per workload container, not per CVE. The relevant series carries no severity or fix: the image series
+    # selects them, with `and` instead of a group_left join, which would fail on duplicate series. for: 1h covers a
+    # rollout, while the new image is scanned and its relevancy is still incomplete. keep_firing_for covers an
+    # exporter restart: its series are gone until the new pod's first list. Deployments, StatefulSets and DaemonSets
+    # only, as the dashboard: a Job gets a new name every run, so each run would read as a new and then a resolved
+    # workload; its image alerts through the image's long-running workloads.
+    - alert: VulnerabilityRelevantCriticalFixable
+      annotations:
+        summary: >-
+          {{ $labels.namespace }}/{{ $labels.workload }} container {{ $labels.container }} loads {{ $value }}
+          critical CVE(s) with a fix.
+        description: >-
+          Container {{ $labels.container }} of {{ $labels.namespace }}/{{ $labels.workload }} on
+          {{ $labels.cluster }} loads packages with critical CVEs for which a fixed version exists: update the image.
+          The Vulnerabilities dashboard lists the CVEs, packages and fixed versions.
+        dashboard_url: GRAFANA_URL/d/kubescape-vulnerabilities/vulnerabilities?var-cluster={{ $labels.cluster }}&var-namespace={{ $labels.namespace }}&var-workload={{ $labels.workload }}
+      expr: |-
+        count by (cluster, namespace, workload, container) (
+          max by (cluster, namespace, workload, container, digest, cve, package, version) (
+            kubescape_workload_vulnerability_relevant{kind=~"Deployment|StatefulSet|DaemonSet"}
+          )
+          and on (cluster, namespace, container, digest) kubescape:container_digest:running
+          and on (cluster, digest, cve, package, version)
+          kubescape_image_vulnerability{severity="critical", fix_state="fixed"}
+        ) > 0
+      for: 1h
+      keep_firing_for: 15m
+      labels:
+        severity: warning
+    - alert: VulnerabilityRelevantCriticalUnfixed
+      annotations:
+        summary: >-
+          {{ $labels.namespace }}/{{ $labels.workload }} container {{ $labels.container }} loads {{ $value }}
+          critical CVE(s) without a fix.
+        description: >-
+          Container {{ $labels.container }} of {{ $labels.namespace }}/{{ $labels.workload }} on
+          {{ $labels.cluster }} loads packages with critical CVEs for which no fixed version exists yet. The
+          Vulnerabilities dashboard lists the CVEs and packages.
+        dashboard_url: GRAFANA_URL/d/kubescape-vulnerabilities/vulnerabilities?var-cluster={{ $labels.cluster }}&var-namespace={{ $labels.namespace }}&var-workload={{ $labels.workload }}
+      expr: |-
+        count by (cluster, namespace, workload, container) (
+          max by (cluster, namespace, workload, container, digest, cve, package, version) (
+            kubescape_workload_vulnerability_relevant{kind=~"Deployment|StatefulSet|DaemonSet"}
+          )
+          and on (cluster, namespace, container, digest) kubescape:container_digest:running
+          and on (cluster, digest, cve, package, version)
+          kubescape_image_vulnerability{severity="critical", fix_state!="fixed"}
+        ) > 0
+      for: 1h
+      keep_firing_for: 15m
+      labels:
+        severity: info
+    # Exposure: the workload can be reached from outside the cluster through a Gateway API route, an Ingress or a
+    # LoadBalancer or NodePort Service (kubescape_workload_exposure_info). Every exposure counts, also internal
+    # gateways behind a source IP filter (access="restricted"); the dashboard shows which. Meant to inhibit the
+    # warning and info alert of the same container (see the README for the Alertmanager inhibit rule).
+    - alert: VulnerabilityRelevantCriticalExposed
+      annotations:
+        summary: >-
+          {{ $labels.namespace }}/{{ $labels.workload }} container {{ $labels.container }} loads {{ $value }}
+          critical CVE(s) and can be reached from outside the cluster.
+        description: >-
+          Container {{ $labels.container }} of {{ $labels.namespace }}/{{ $labels.workload }} on
+          {{ $labels.cluster }} loads packages with critical CVEs, and the workload can be reached from outside
+          the cluster (through a route, an Ingress or a LoadBalancer or NodePort Service). Update the image or
+          limit its exposure. The Vulnerabilities dashboard shows how it is reached and what to fix.
+        dashboard_url: GRAFANA_URL/d/kubescape-vulnerabilities/vulnerabilities?var-cluster={{ $labels.cluster }}&var-namespace={{ $labels.namespace }}&var-workload={{ $labels.workload }}
+      expr: |-
+        count by (cluster, namespace, workload, container) (
+          max by (cluster, namespace, workload, container, digest, cve, package, version) (
+            kubescape_workload_vulnerability_relevant{kind=~"Deployment|StatefulSet|DaemonSet"}
+          )
+          and on (cluster, namespace, container, digest) kubescape:container_digest:running
+          and on (cluster, digest, cve, package, version)
+          kubescape_image_vulnerability{severity="critical"}
+          and on (cluster, namespace, workload)
+          kubescape_workload_exposure_info
+        ) > 0
+      for: 1h
+      keep_firing_for: 15m
+      labels:
+        severity: critical
+    # Exploit data from the exporter's feeds. KEV: exploited in the wild now (CISA), whatever the severity within the
+    # exporter's floor. Critical only when the workload can be reached from outside the cluster; otherwise a warning,
+    # like a fixable critical: an attacker first needs another way in. EPSS: probability of exploitation in the next
+    # 30 days (FIRST); KEV CVEs are left out, they already alert.
+    - alert: VulnerabilityRelevantKEVExposed
+      annotations:
+        summary: >-
+          {{ $labels.namespace }}/{{ $labels.workload }} container {{ $labels.container }} loads {{ $value }}
+          CVE(s) that are exploited in the wild (CISA KEV) and can be reached from outside the cluster.
+        description: >-
+          Container {{ $labels.container }} of {{ $labels.namespace }}/{{ $labels.workload }} on
+          {{ $labels.cluster }} loads packages with CVEs on CISA's Known Exploited Vulnerabilities list, and the
+          workload can be reached from outside the cluster: attackers use these CVEs now. Update, mitigate or limit
+          its exposure first. The Vulnerabilities dashboard lists the CVEs and how it is reached.
+        dashboard_url: GRAFANA_URL/d/kubescape-vulnerabilities/vulnerabilities?var-cluster={{ $labels.cluster }}&var-namespace={{ $labels.namespace }}&var-workload={{ $labels.workload }}
+      expr: |-
+        count by (cluster, namespace, workload, container) (
+          max by (cluster, namespace, workload, container, digest, cve, package, version) (
+            kubescape_workload_vulnerability_relevant{kind=~"Deployment|StatefulSet|DaemonSet"}
+          )
+          and on (cluster, namespace, container, digest) kubescape:container_digest:running
+          and on (cluster, cve) kubescape_cve_kev
+          and on (cluster, namespace, workload) kubescape_workload_exposure_info
+        ) > 0
+      for: 1h
+      keep_firing_for: 15m
+      labels:
+        severity: critical
+    - alert: VulnerabilityRelevantKEV
+      annotations:
+        summary: >-
+          {{ $labels.namespace }}/{{ $labels.workload }} container {{ $labels.container }} loads {{ $value }}
+          CVE(s) that are exploited in the wild (CISA KEV).
+        description: >-
+          Container {{ $labels.container }} of {{ $labels.namespace }}/{{ $labels.workload }} on
+          {{ $labels.cluster }} loads packages with CVEs on CISA's Known Exploited Vulnerabilities list: attackers
+          use them now. Update or mitigate this first. The Vulnerabilities dashboard lists the CVEs.
+        dashboard_url: GRAFANA_URL/d/kubescape-vulnerabilities/vulnerabilities?var-cluster={{ $labels.cluster }}&var-namespace={{ $labels.namespace }}&var-workload={{ $labels.workload }}
+      expr: |-
+        count by (cluster, namespace, workload, container) (
+          max by (cluster, namespace, workload, container, digest, cve, package, version) (
+            kubescape_workload_vulnerability_relevant{kind=~"Deployment|StatefulSet|DaemonSet"}
+          )
+          and on (cluster, namespace, container, digest) kubescape:container_digest:running
+          and on (cluster, cve) kubescape_cve_kev
+          unless on (cluster, namespace, workload) kubescape_workload_exposure_info
+        ) > 0
+      for: 1h
+      keep_firing_for: 15m
+      labels:
+        severity: warning
+    - alert: VulnerabilityRelevantHighEPSS
+      annotations:
+        summary: >-
+          {{ $labels.namespace }}/{{ $labels.workload }} container {{ $labels.container }} loads {{ $value }}
+          CVE(s) with an EPSS of 10% or more.
+        description: >-
+          Container {{ $labels.container }} of {{ $labels.namespace }}/{{ $labels.workload }} on
+          {{ $labels.cluster }} loads packages with CVEs that have at least a 10% chance of being exploited in the
+          next 30 days (EPSS, FIRST). The Vulnerabilities dashboard lists the CVEs.
+        dashboard_url: GRAFANA_URL/d/kubescape-vulnerabilities/vulnerabilities?var-cluster={{ $labels.cluster }}&var-namespace={{ $labels.namespace }}&var-workload={{ $labels.workload }}
+      expr: |-
+        count by (cluster, namespace, workload, container) (
+          max by (cluster, namespace, workload, container, digest, cve, package, version) (
+            kubescape_workload_vulnerability_relevant{kind=~"Deployment|StatefulSet|DaemonSet"}
+          )
+          and on (cluster, namespace, container, digest) kubescape:container_digest:running
+          and on (cluster, cve) (kubescape_cve_epss_score >= 0.1)
+          unless on (cluster, cve) kubescape_cve_kev
+        ) > 0
+      for: 1h
+      keep_firing_for: 15m
+      labels:
+        severity: warning
+    - alert: KubescapeCveFeedStale
+      annotations:
+        summary: The {{ $labels.feed }} feed of kubescape-findings-exporter is older than 3 days.
+        description: >-
+          kubescape-findings-exporter could not download the {{ $labels.feed }} feed for 3 days. The EPSS and KEV
+          columns and alerts use old data. Check the exporter log and outbound access to the feed URL.
+      expr: time() - kubescape_cve_exporter_feed_last_success_timestamp_seconds > 3 * 86400
+      labels:
+        severity: warning
+    # The download works but the data itself is old: the publisher stopped updating it, or the URL serves a frozen
+    # file. EPSS is published daily; KEV a few times a week, with quiet weeks.
+    - alert: KubescapeCveFeedDataOld
+      annotations:
+        summary: The data of the {{ $labels.feed }} feed is older than expected.
+        description: >-
+          kubescape-findings-exporter downloads the {{ $labels.feed }} feed, but its data is older than expected (EPSS
+          is published daily, KEV at least every two weeks). The publisher may have stopped updating it or the URL
+          may serve an old file. Check the feed URL and the "published" time in the exporter log.
+      expr: |-
+        time() - kubescape_cve_exporter_feed_data_timestamp_seconds{feed="epss"} > 3 * 86400
+        or
+        time() - kubescape_cve_exporter_feed_data_timestamp_seconds{feed="kev"} > 14 * 86400
+      labels:
+        severity: warning
+    # The second branch needs no cluster list: it fires for every cluster where Kubescape runs (its
+    # kubevuln-scheduler CronJob, from kube-state-metrics) but the exporter does not report.
+    - alert: KubescapeCveExporterFailing
+      annotations:
+        summary: kubescape-findings-exporter has no recent list of the Kubescape scan results.
+        description: >-
+          Either its last successful list is more than an hour old, or Kubescape runs on this cluster but there are
+          no exporter series. The per-CVE series, the Vulnerabilities dashboard and the vulnerability alerts are
+          stale. Check the kubescape-findings-exporter pod in KUBESCAPE_NAMESPACE and its log.
+      expr: |-
+        time() - kubescape_cve_exporter_last_success_timestamp_seconds > 3600
+        or
+        count by (cluster) (kube_cronjob_info{namespace="KUBESCAPE_NAMESPACE", cronjob="kubevuln-scheduler"})
+          unless on (cluster) kubescape_cve_exporter_last_success_timestamp_seconds
+      for: 15m
+      labels:
+        severity: warning
+    # A successful CronJob proves the rescans were triggered, not that each one succeeded.
+    - alert: KubescapeDailyScanMissing
+      annotations:
+        summary: The daily Kubescape scan has not succeeded for more than 26 hours.
+        description: >-
+          The kubevuln-scheduler CronJob in KUBESCAPE_NAMESPACE starts the daily rescan of all images against the
+          current Grype database. Without it new CVEs in running images stay unseen. Check its jobs and the kubevuln
+          log.
+      expr: |-
+        time() - kube_cronjob_status_last_successful_time{namespace="KUBESCAPE_NAMESPACE", cronjob="kubevuln-scheduler"}
+          > 26 * 3600
+      labels:
+        severity: warning
+
+# Score as in Kubescape's Headlamp plugin: per control passed / all resources it was evaluated on (passed, failed and
+# skipped), and a framework or CIS section is the average over all its controls, where a control without any
+# resource on the cluster counts as 100%. The exporter emits no zero counts, hence `or 0 * ...` in the numerator; a
+# control without resources has no ratio and gets 1 through `or on (...) <mapping>` (the mapping series have the
+# value 1).
+- name: kubescape-posture-recording
+  rules:
+    - record: kubescape:posture_control_score:ratio
+      expr: |-
+        sum by (cluster, control) (
+          max by (cluster, namespace, control, status) (kubescape_posture_control_resources{status="passed"})
+          or 0 * max by (cluster, namespace, control, status) (kubescape_posture_control_resources)
+        )
+        / sum by (cluster, control) (
+          max by (cluster, namespace, control, status) (kubescape_posture_control_resources)
+        )
+    - record: kubescape:posture_framework_score:avg
+      expr: |-
+        avg by (cluster, framework) (
+          max by (cluster, framework, control) (kubescape_posture_framework_control)
+          * on (cluster, control) group_left kubescape:posture_control_score:ratio
+          or on (cluster, framework, control)
+            max by (cluster, framework, control) (kubescape_posture_framework_control)
+        )
+    - record: kubescape:posture_section_score:avg
+      expr: |-
+        avg by (cluster, framework, section, section_name) (
+          max by (cluster, framework, section, section_name, control) (kubescape_posture_framework_section)
+          * on (cluster, control) group_left kubescape:posture_control_score:ratio
+          or on (cluster, framework, section, control)
+            max by (cluster, framework, section, section_name, control) (kubescape_posture_framework_section)
+        )
+    # Every finding of a critical or high control that is new since yesterday, one series per resource and control
+    # with its real name and binding: the source of PostureRegression and of the "New since yesterday" table on the
+    # Posture dashboard, so both agree on what is new. High as well as critical: the typical rollout mistakes
+    # (privileged container C-0057, hostPath, cluster-admin bindings) are high in Kubescape. A finding is new when it
+    # did not fail at any moment between 48 and 24 hours ago (`[1d] offset 1d`); it resolves after about a day. The
+    # window is a day, not an hour, because Kubescape rescans a replaced workload only in its nightly scan: after an
+    # upgrade the resource has no series for up to a day.
+    # Names are compared without their generated part, otherwise every rollout of a renamed object counts as new:
+    # - a trailing hex or digit suffix of 6+ characters on `name` and `binding`: e.g. Crossplane provider revisions
+    #   and Jobs named after a timestamp;
+    # - the node name of host-scanner kinds (`KubeletInfo`, `CNIInfo`): an autoscaler replaces nodes, and a control
+    #   failing on a new node that already failed on another one is not new.
+    # The `original_name` and `original_binding` labels keep the old and the new name apart (label_replace refuses
+    # duplicate label sets) and give the result its real names back at the end. A legitimate name ending in 6+ hex
+    # characters (`-facade`) is compared without it, accepted. The last clause keeps a cluster without posture data a
+    # day ago quiet: a new cluster, or a scan gap of over a day. A new namespace counts entirely as new, which is
+    # intended. Cluster-scoped resources (ClusterRole, Namespace, nodes) have namespace="".
+    - record: kubescape:posture_resource_failed:new
+      expr: |-
+        max by (cluster, namespace, kind, name, binding, control) (
+          label_replace(label_replace(
+            max by (cluster, namespace, kind, name, binding, control, original_name, original_binding) (
+              label_replace(label_replace(label_replace(label_replace(label_replace(
+                kubescape_posture_resource_failed,
+                "original_name", "$1", "name", "(.*)"),
+                "original_binding", "$1", "binding", "(.*)"),
+                "name", "", "kind", ".+Info"),
+                "name", "$1", "name", "(.+)-[0-9a-f]{6,}"),
+                "binding", "$1", "binding", "(.+)-[0-9a-f]{6,}")
+            )
+            and on (cluster, control) kubescape_posture_control_info{severity=~"critical|high"}
+            unless on (cluster, namespace, kind, name, binding, control)
+              max by (cluster, namespace, kind, name, binding, control) (
+                label_replace(label_replace(label_replace(label_replace(label_replace(
+                  last_over_time(kubescape_posture_resource_failed[1d] offset 1d),
+                  "original_name", "$1", "name", "(.*)"),
+                  "original_binding", "$1", "binding", "(.*)"),
+                  "name", "", "kind", ".+Info"),
+                  "name", "$1", "name", "(.+)-[0-9a-f]{6,}"),
+                  "binding", "$1", "binding", "(.+)-[0-9a-f]{6,}")
+              )
+            and on (cluster)
+              last_over_time(kubescape_posture_last_scan_timestamp_seconds[1d] offset 1d),
+            "name", "$1", "original_name", "(.*)"),
+            "binding", "$1", "original_binding", "(.*)")
+        )
+
+- name: kubescape-posture
+  rules:
+    # One alert per namespace with the number of new findings (kubescape:posture_resource_failed:new): "you just
+    # rolled out something that fails a control", not a to-do list (that is the dashboard). It resolves after about a
+    # day. Cluster-scoped resources have namespace="" and get their own alert.
+    - alert: PostureRegression
+      annotations:
+        summary: >-
+          {{ $value }}{{ if $labels.namespace }} resource(s) in namespace {{ $labels.namespace }}{{ else }}
+          cluster-scoped resource(s){{ end }} on {{ $labels.cluster }} newly fail a critical or high posture
+          control.
+        description: >-
+          {{ if $labels.namespace }}Resources in namespace {{ $labels.namespace }}{{ else }}Cluster-scoped
+          resources{{ end }} on {{ $labels.cluster }} fail a critical or high Kubescape control that they did not
+          fail the day before: a recent rollout weakened the configuration. The alert resolves after about a day.
+          The Posture dashboard lists the resources and controls.
+        dashboard_url: GRAFANA_URL/d/kubescape-posture/posture?var-cluster={{ $labels.cluster }}&var-namespace={{ $labels.namespace }}
+      expr: count by (cluster, namespace) (kubescape:posture_resource_failed:new) > 0
+      for: 1h
+      labels:
+        severity: warning
+    # Kubescape scans the configuration daily (and on changes); the exporter reports the newest summary's report
+    # time. Exporter failures have their own alert (KubescapeCveExporterFailing).
+    - alert: KubescapePostureScanStale
+      annotations:
+        summary: The newest Kubescape posture scan on {{ $labels.cluster }} is older than 26 hours.
+        description: >-
+          No workload configuration scan summary on {{ $labels.cluster }} is newer than 26 hours. Kubescape scans the
+          cluster configuration daily; the posture score, the Posture dashboard and PostureRegression use old data.
+          Check the kubescape and operator pods in KUBESCAPE_NAMESPACE and their logs.
+      expr: time() - max by (cluster) (kubescape_posture_last_scan_timestamp_seconds) > 26 * 3600
+      labels:
+        severity: warning

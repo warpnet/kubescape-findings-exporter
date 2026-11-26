@@ -1,0 +1,237 @@
+suite: default values
+templates:
+  - clusterrole.yaml
+  - deployment.yaml
+  - role.yaml
+  - servicemonitor.yaml
+  - prometheusrule.yaml
+release:
+  name: kubescape-findings-exporter
+  namespace: kubescape
+chart:
+  appVersion: 1.2.3
+tests:
+  - it: lets the exporter only read VulnerabilityManifests in the Kubescape namespace
+    template: role.yaml
+    documentIndex: 0
+    asserts:
+      - isKind:
+          of: Role
+      - equal:
+          path: metadata.namespace
+          value: kubescape
+      - equal:
+          path: rules
+          value:
+            - apiGroups: [spdx.softwarecomposition.kubescape.io]
+              resources: [vulnerabilitymanifests]
+              verbs: [get, list]
+  - it: binds the Role to the chart's ServiceAccount
+    template: role.yaml
+    documentIndex: 1
+    asserts:
+      - isKind:
+          of: RoleBinding
+      - equal:
+          path: subjects[0]
+          value:
+            kind: ServiceAccount
+            name: kubescape-findings-exporter
+            namespace: kubescape
+  - it: lets the exporter only read the exposure objects and the configuration scan summaries, in all namespaces
+    template: clusterrole.yaml
+    documentIndex: 0
+    asserts:
+      - isKind:
+          of: ClusterRole
+      - equal:
+          path: metadata.name
+          value: kubescape-findings-exporter
+      - equal:
+          path: rules
+          value:
+            - apiGroups: [gateway.networking.k8s.io]
+              resources: [gateways, httproutes, grpcroutes, tlsroutes, tcproutes, udproutes]
+              verbs: [get, list]
+            - apiGroups: [networking.k8s.io]
+              resources: [ingresses]
+              verbs: [get, list]
+            - apiGroups: [""]
+              resources: [services, pods]
+              verbs: [get, list]
+            - apiGroups: [discovery.k8s.io]
+              resources: [endpointslices]
+              verbs: [get, list]
+            - apiGroups: [apps]
+              resources: [replicasets]
+              verbs: [get, list]
+            - apiGroups: [spdx.softwarecomposition.kubescape.io]
+              resources: [workloadconfigurationscansummaries]
+              verbs: [get, list]
+  - it: binds the ClusterRole to the chart's ServiceAccount
+    template: clusterrole.yaml
+    documentIndex: 1
+    asserts:
+      - isKind:
+          of: ClusterRoleBinding
+      - equal:
+          path: roleRef
+          value:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: kubescape-findings-exporter
+      - equal:
+          path: subjects[0]
+          value:
+            kind: ServiceAccount
+            name: kubescape-findings-exporter
+            namespace: kubescape
+  - it: runs the chart's appVersion with the default flags
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: ghcr.io/warpnet/kubescape-findings-exporter:1.2.3
+      - equal:
+          path: spec.template.spec.containers[0].args
+          value:
+            - --namespace=kubescape
+            - --interval=5m
+            - --min-severity=medium
+            - --page-size=10
+            - --cluster-page-size=500
+            - --feed-interval=24h
+            - --epss-url=https://epss.empiricalsecurity.com/epss_scores-current.csv.gz
+            - --kev-url=https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+            - --frameworks-url=https://github.com/kubescape/regolibrary/releases/download/v2.0.39/FWName_CID_CName
+            - --sections-url=https://github.com/kubescape/regolibrary/releases/download/v2.0.39/frameworks
+  - it: runs restricted
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext
+          value:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+  - it: sets no CPU limit
+    template: deployment.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].resources.limits.cpu
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 512Mi
+  - it: does not render a ServiceMonitor by default
+    template: servicemonitor.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: keeps the workload labels of the series when scraped
+    template: servicemonitor.yaml
+    set:
+      serviceMonitor.enabled: true
+    asserts:
+      - equal:
+          path: spec.endpoints[0]
+          value:
+            port: metrics
+            path: /metrics
+            interval: 60s
+            honorLabels: true
+  - it: never runs two exporters at once, so the per-CVE series are never duplicated
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.strategy
+          value:
+            type: Recreate
+  - it: lets the Go runtime collect garbage before the memory limit is reached
+    template: deployment.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: GOMEMLIMIT
+            valueFrom:
+              resourceFieldRef:
+                resource: limits.memory
+  - it: can switch a feed off with an empty URL
+    template: deployment.yaml
+    set:
+      feeds.epssURL: ""
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --epss-url=
+  - it: can switch the framework mapping off with an empty URL
+    template: deployment.yaml
+    set:
+      feeds.frameworksURL: ""
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --frameworks-url=
+  - it: can switch the CIS sections off with an empty URL
+    template: deployment.yaml
+    set:
+      feeds.sectionsURL: ""
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].args
+          content: --sections-url=
+  - it: renders no PrometheusRule by default
+    template: prometheusrule.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+  - it: points the rules at the Kubescape namespace and links the dashboards
+    template: prometheusrule.yaml
+    set:
+      prometheusRule.enabled: true
+      prometheusRule.grafanaURL: https://grafana.example.com/
+      prometheusRule.labels:
+        release: kube-prometheus-stack
+    asserts:
+      - isKind:
+          of: PrometheusRule
+      - equal:
+          path: metadata.labels.release
+          value: kube-prometheus-stack
+      - lengthEqual:
+          path: spec.groups
+          count: 4
+      - matchRegex:
+          path: spec.groups[1].rules[0].annotations.dashboard_url
+          pattern: ^https://grafana\.example\.com/d/kubescape-vulnerabilities/vulnerabilities\?var-cluster=\{\{ \$labels\.cluster \}\}
+      - matchRegex:
+          path: spec.groups[1].rules[9].expr
+          pattern: namespace="kubescape", cronjob="kubevuln-scheduler"
+      - notMatchRegexRaw:
+          pattern: KUBESCAPE_NAMESPACE|GRAFANA_URL
+  - it: leaves the dashboard links out without a Grafana URL
+    template: prometheusrule.yaml
+    set:
+      prometheusRule.enabled: true
+    asserts:
+      - notExists:
+          path: spec.groups[1].rules[0].annotations.dashboard_url
+      - notExists:
+          path: spec.groups[3].rules[0].annotations.dashboard_url
+  - it: adds extra labels to the ServiceMonitor
+    template: servicemonitor.yaml
+    set:
+      serviceMonitor.enabled: true
+      serviceMonitor.labels:
+        release: kube-prometheus-stack
+    asserts:
+      - equal:
+          path: metadata.labels.release
+          value: kube-prometheus-stack

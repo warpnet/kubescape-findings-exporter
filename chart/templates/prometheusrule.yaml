@@ -1,0 +1,21 @@
+{{- if .Values.prometheusRule.enabled }}
+{{- /* files/rules.yaml is not templated, so its Prometheus templates stay intact: only the two placeholders. */}}
+{{- $rules := .Files.Get "files/rules.yaml" | replace "KUBESCAPE_NAMESPACE" (include "kce.kubescapeNamespace" .) }}
+{{- with .Values.prometheusRule.grafanaURL }}
+{{- $rules = $rules | replace "GRAFANA_URL" (trimSuffix "/" .) }}
+{{- else }}
+{{- $rules = regexReplaceAll "(?m)^ *dashboard_url: .*\n" $rules "" }}
+{{- end }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "kce.labels" . | nindent 4 }}
+    {{- with .Values.prometheusRule.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    {{- $rules | nindent 4 }}
+{{- end }}

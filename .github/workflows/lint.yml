@@ -1,0 +1,58 @@
+name: Lint
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+# The same linters, versions and flags as the maintainers' internal CI. The images run as job containers, so Renovate
+# bumps them.
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: azure/setup-helm@v4
+      - run: helm lint chart
+
+  docker:
+    runs-on: ubuntu-latest
+    container: ghcr.io/hadolint/hadolint:v2.15.1-debian
+    steps:
+      - uses: actions/checkout@v6
+      - run: hadolint --ignore DL3006 --ignore DL3013 --ignore DL3018 --ignore DL3059 Dockerfile
+
+  markdown:
+    runs-on: ubuntu-latest
+    container: registry.gitlab.com/pipeline-components/markdownlint:0.14.25
+    steps:
+      - uses: actions/checkout@v6
+      # MD033 (inline HTML) off as well: the README folds its screenshots in <details>.
+      - run: mdl --style all --rules '~MD013,~MD033' .
+
+  json:
+    runs-on: ubuntu-latest
+    container: registry.gitlab.com/pipeline-components/jsonlint:0.22.32
+    steps:
+      - uses: actions/checkout@v6
+      - run: find . -not -path './.git/*' -name '*.json' -type f -exec jsonlint -q {} +
+
+  # Pull requests are squash-merged with their title as the commit message, so the title decides the release; the
+  # pull request's own commits are linted as well.
+  commit:
+    runs-on: ubuntu-latest
+    container: commitlint/commitlint:21.2.3
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Pull request title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$TITLE" | commitlint --default-config --verbose
+      - name: Commits
+        run: >-
+          commitlint --default-config --verbose
+          --from ${{ github.event.pull_request.base.sha }}
+          --to ${{ github.event.pull_request.head.sha }}

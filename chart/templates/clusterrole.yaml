@@ -1,0 +1,43 @@
+# Read-only access, in all namespaces, to the objects the exposure series is derived from: routes and Ingresses, the
+# Services and EndpointSlices behind them, and the pods and ReplicaSets that lead to the workload; and Kubescape's
+# configuration scan summaries, which are stored in every namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "kce.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [gateway.networking.k8s.io]
+    resources: [gateways, httproutes, grpcroutes, tlsroutes, tcproutes, udproutes]
+    verbs: [get, list]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [services, pods]
+    verbs: [get, list]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list]
+  - apiGroups: [apps]
+    resources: [replicasets]
+    verbs: [get, list]
+  - apiGroups: [spdx.softwarecomposition.kubescape.io]
+    resources: [workloadconfigurationscansummaries]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "kce.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Release.Name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Release.Name }}
+    namespace: {{ .Release.Namespace }}

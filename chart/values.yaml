@@ -1,0 +1,63 @@
+---
+
+image:
+  repository: ghcr.io/warpnet/kubescape-findings-exporter
+  # Defaults to the chart's appVersion, so a chart release runs the build it was made for.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Namespace of the Kubescape VulnerabilityManifests. Empty means the release namespace.
+kubescapeNamespace: ""
+
+# Time between two lists of all manifests. Kubescape scans on container starts and once a day.
+interval: 5m
+
+# Lowest severity exported in detail: negligible, low, medium, high or critical.
+minSeverity: medium
+
+# Manifests per list request. Manifests are large; a smaller page lowers the peak memory.
+pageSize: 10
+
+# Objects per list request for the exposure (routes, services, endpointslices, pods, replicasets) and the
+# configuration scan summaries, all namespaces.
+clusterPageSize: 500
+
+# Exploit data for the CVEs on the cluster and the framework mapping, downloaded from the internet. An empty URL switches that feed off.
+feeds:
+  # Time between two downloads. EPSS publishes once a day (around 13:30 UTC), KEV a few times a week.
+  interval: 24h
+  # FIRST's daily EPSS scores: probability of exploitation in the next 30 days, per CVE.
+  epssURL: https://epss.empiricalsecurity.com/epss_scores-current.csv.gz
+  # CISA's Known Exploited Vulnerabilities catalog: CVEs exploited in the wild.
+  kevURL: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+  # Kubescape regolibrary's control-to-framework mapping (CIS, NSA, MITRE...). Pinned to a release; Renovate bumps
+  # it. Empty maps every control to framework="unmapped".
+  frameworksURL: https://github.com/kubescape/regolibrary/releases/download/v2.0.39/FWName_CID_CName
+  # The same release's frameworks JSON: the CIS sections (Control Plane, Worker Nodes...) and their controls.
+  # Empty disables the section series.
+  sectionsURL: https://github.com/kubescape/regolibrary/releases/download/v2.0.39/frameworks
+
+# ponytail: first guess, correct from the measured usage after a week. No CPU limit on purpose.
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+serviceMonitor:
+  # Requires the Prometheus Operator CRDs.
+  enabled: false
+  # Extra labels, e.g. the release label the serviceMonitorSelector of kube-prometheus-stack matches on.
+  labels: {}
+  interval: 60s
+
+# Recording rules and alerts for the dashboards in dashboards/ (see the README). They also need kube-state-metrics.
+prometheusRule:
+  # Requires the Prometheus Operator CRDs.
+  enabled: false
+  # Extra labels, e.g. the release label the Prometheus ruleSelector of kube-prometheus-stack matches on.
+  labels: {}
+  # Base URL of the Grafana with the dashboards, e.g. https://grafana.example.com. Adds a dashboard_url annotation
+  # with a link to the dashboard to every alert that has one; empty leaves it out.
+  grafanaURL: ""

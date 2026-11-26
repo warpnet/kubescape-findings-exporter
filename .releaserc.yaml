@@ -1,0 +1,25 @@
+---
+branches:
+  - main
+plugins:
+  # conventionalcommits, not the default angular preset: angular ignores "feat!:".
+  - - '@semantic-release/commit-analyzer'
+    - preset: conventionalcommits
+      releaseRules:
+        # Renovate bumps release; other chores do not.
+        - type: chore
+          scope: deps
+          release: patch
+  - - '@semantic-release/release-notes-generator'
+    - preset: conventionalcommits
+  # Lockstep: chart X.Y.Z always ships image X.Y.Z.
+  - - '@semantic-release/exec'
+    - prepareCmd: >-
+        VERSION=${nextRelease.version} yq -i
+        '.version = strenv(VERSION) | .appVersion = strenv(VERSION) | .appVersion style="double"'
+        chart/Chart.yaml
+  - - '@semantic-release/git'
+    - assets:
+        - chart/Chart.yaml
+      message: 'chore(release): ${nextRelease.version}'
+  - '@semantic-release/github'

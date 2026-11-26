@@ -1,0 +1,800 @@
+{
+  "metadata": {
+    "name": "deployment-cert-manager",
+    "namespace": "cert-manager",
+    "uid": "e846faa6-95c0-4c9d-a86a-5cbbadb8a30a",
+    "resourceVersion": "3",
+    "creationTimestamp": "2026-11-07T04:00:45Z",
+    "labels": {
+      "kubescape.io/workload-api-group": "apps",
+      "kubescape.io/workload-api-version": "v1",
+      "kubescape.io/workload-kind": "Deployment",
+      "kubescape.io/workload-name": "cert-manager",
+      "kubescape.io/workload-namespace": "cert-manager"
+    },
+    "annotations": {
+      "kubescape.io/report-created-at": "2026-11-09T03:58:02.955064615Z",
+      "kubescape.io/sync-checksum": "72c3d97aad79561fad0f3d4ba9e79dc0e42b7526c3b23209e36db756ce1935d2",
+      "kubescape.io/wlid": "wlid://cluster-lab/namespace-cert-manager/deployment-cert-manager"
+    }
+  },
+  "spec": {
+    "severities": {
+      "critical": 0,
+      "high": 8,
+      "medium": 6,
+      "low": 3,
+      "unknown": 0
+    },
+    "controls": {
+      "C-0001": {
+        "controlID": "C-0001",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 7
+        },
+        "status": {
+          "status": "skipped",
+          "subStatus": "configuration",
+          "info": "Control configurations are empty (docs: https://kubescape.io/docs/frameworks-and-controls/configuring-controls)"
+        }
+      },
+      "C-0004": {
+        "controlID": "C-0004",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 8
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0009": {
+        "controlID": "C-0009",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 7
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0012": {
+        "controlID": "C-0012",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 8
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0013": {
+        "controlID": "C-0013",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 6
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0014": {
+        "controlID": "C-0014",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 2
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0016": {
+        "controlID": "C-0016",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 6
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0017": {
+        "controlID": "C-0017",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 3
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0018": {
+        "controlID": "C-0018",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 3
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0020": {
+        "controlID": "C-0020",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 4
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0030": {
+        "controlID": "C-0030",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 6
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0034": {
+        "controlID": "C-0034",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 6
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0038": {
+        "controlID": "C-0038",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 7
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0041": {
+        "controlID": "C-0041",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 7
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0044": {
+        "controlID": "C-0044",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 4
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0045": {
+        "controlID": "C-0045",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 8
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0046": {
+        "controlID": "C-0046",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 7
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0048": {
+        "controlID": "C-0048",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 7
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0050": {
+        "controlID": "C-0050",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 8
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0055": {
+        "controlID": "C-0055",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 4
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0056": {
+        "controlID": "C-0056",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 4
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0057": {
+        "controlID": "C-0057",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 8
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0061": {
+        "controlID": "C-0061",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 3
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0062": {
+        "controlID": "C-0062",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 5
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0074": {
+        "controlID": "C-0074",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 5
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0075": {
+        "controlID": "C-0075",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 2
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0076": {
+        "controlID": "C-0076",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 2
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0077": {
+        "controlID": "C-0077",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 2
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0078": {
+        "controlID": "C-0078",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 5
+        },
+        "status": {
+          "status": "skipped",
+          "subStatus": "configuration",
+          "info": "Control configurations are empty (docs: https://kubescape.io/docs/frameworks-and-controls/configuring-controls)"
+        }
+      },
+      "C-0190": {
+        "controlID": "C-0190",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 5
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0207": {
+        "controlID": "C-0207",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 4
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0210": {
+        "controlID": "C-0210",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 4
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0211": {
+        "controlID": "C-0211",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 8
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0212": {
+        "controlID": "C-0212",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 4
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0234": {
+        "controlID": "C-0234",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 6
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0236": {
+        "controlID": "C-0236",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 7
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0237": {
+        "controlID": "C-0237",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 7
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0255": {
+        "controlID": "C-0255",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 8
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0256": {
+        "controlID": "C-0256",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 7
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0257": {
+        "controlID": "C-0257",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 4
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0258": {
+        "controlID": "C-0258",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 5
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0259": {
+        "controlID": "C-0259",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 8
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0260": {
+        "controlID": "C-0260",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 5
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0261": {
+        "controlID": "C-0261",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 7
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0266": {
+        "controlID": "C-0266",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 7
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0267": {
+        "controlID": "C-0267",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 6
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0268": {
+        "controlID": "C-0268",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 3
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0269": {
+        "controlID": "C-0269",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 3
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0270": {
+        "controlID": "C-0270",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 8
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0271": {
+        "controlID": "C-0271",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 8
+        },
+        "status": {
+          "status": "failed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0272": {
+        "controlID": "C-0272",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 6
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0274": {
+        "controlID": "C-0274",
+        "severity": {
+          "severity": "High",
+          "scoreFactor": 7
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0275": {
+        "controlID": "C-0275",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 5
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0276": {
+        "controlID": "C-0276",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 5
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0292": {
+        "controlID": "C-0292",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 6
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0293": {
+        "controlID": "C-0293",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 3
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0294": {
+        "controlID": "C-0294",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 3
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0295": {
+        "controlID": "C-0295",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 3
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0296": {
+        "controlID": "C-0296",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 3
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0299": {
+        "controlID": "C-0299",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 4
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0300": {
+        "controlID": "C-0300",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 4
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0305": {
+        "controlID": "C-0305",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 3
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      },
+      "C-0306": {
+        "controlID": "C-0306",
+        "severity": {
+          "severity": "Low",
+          "scoreFactor": 3
+        },
+        "status": {
+          "status": "skipped",
+          "subStatus": "configuration",
+          "info": "Control configurations are empty (docs: https://kubescape.io/docs/frameworks-and-controls/configuring-controls)"
+        }
+      },
+      "C-0307": {
+        "controlID": "C-0307",
+        "severity": {
+          "severity": "Medium",
+          "scoreFactor": 5
+        },
+        "status": {
+          "status": "passed",
+          "subStatus": "",
+          "info": ""
+        }
+      }
+    }
+  }
+}

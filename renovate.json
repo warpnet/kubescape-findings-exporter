@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":preserveSemverRanges",
+    ":rebaseStalePrs",
+    ":enableVulnerabilityAlertsWithLabel('security')",
+    "group:all"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Kubescape regolibrary release of the frameworks and sections feeds, pinned in the flag defaults, the chart, its test and the README",
+      "managerFilePatterns": ["/^cmd/kubescape-findings-exporter/main\\.go$/", "/^chart/values\\.yaml$/", "/^chart/tests/default_test\\.yaml$/", "/^README\\.md$/"],
+      "matchStrings": ["regolibrary/releases/download/(?<currentValue>v[0-9.]+)/"],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "kubescape/regolibrary"
+    }
+  ]
+}

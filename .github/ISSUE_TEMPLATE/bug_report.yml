@@ -1,0 +1,41 @@
+name: Bug report
+description: Something does not work as described.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: Steps, Helm values or flags, and the series or log lines involved.
+    validations:
+      required: true
+  - type: input
+    id: exporter-version
+    attributes:
+      label: Exporter version
+      placeholder: e.g. 2.0.0
+    validations:
+      required: true
+  - type: input
+    id: kubescape-version
+    attributes:
+      label: Kubescape operator version
+      placeholder: e.g. 1.30.0
+  - type: input
+    id: kubernetes-version
+    attributes:
+      label: Kubernetes version and distribution
+      placeholder: e.g. 1.34 on EKS
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Exporter logs around the problem. Remove anything you do not want to share.
+      render: text
