@@ -12,22 +12,22 @@ jobs:
   helm:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: azure/setup-helm@v4
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
       - run: helm lint chart
 
   docker:
     runs-on: ubuntu-latest
     container: ghcr.io/hadolint/hadolint:v2.15.1-debian
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: hadolint --ignore DL3006 --ignore DL3013 --ignore DL3018 --ignore DL3059 Dockerfile
 
   markdown:
     runs-on: ubuntu-latest
     container: registry.gitlab.com/pipeline-components/markdownlint:0.14.25
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       # MD033 (inline HTML) off as well: the README folds its screenshots in <details>.
       - run: mdl --style all --rules '~MD013,~MD033' .
 
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     container: registry.gitlab.com/pipeline-components/jsonlint:0.22.32
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: find . -not -path './.git/*' -name '*.json' -type f -exec jsonlint -q {} +
 
   # Pull requests are squash-merged with their title as the commit message, so the title decides the release; the
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     container: commitlint/commitlint:21.2.3
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Pull request title
