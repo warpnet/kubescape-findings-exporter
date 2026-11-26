@@ -191,7 +191,10 @@ joins on them) and sets `GOMEMLIMIT` from the memory limit.
 
 Kubescape storage returns manifests without `spec` unless the request sets `resourceVersion=fullSpec`, so the exporter
 always sets it. Manifests with `spec.metadata.withRelevancy: true` (one per workload instance) give the relevant
-series, the others (one per image) the image series.
+series, the others (one per image) the image series. Kubescape keeps the manifest of a Deployment's old ReplicaSet
+until it collects it, and after a rollout that kept the image its packages would count for the running container; the
+exporter skips the manifest of a ReplicaSet without pods (`kubescape.io/instance-template-hash`). StatefulSet and
+DaemonSet revisions have no such label and are not filtered.
 
 | Flag | Default |
 |------|---------|

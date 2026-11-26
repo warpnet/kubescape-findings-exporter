@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -24,6 +25,29 @@ func TestRefreshSetsSnapshot(t *testing.T) {
 	// image info, image vulnerability, exposure and the timestamp
 	if n := testutil.CollectAndCount(c); n != 4 {
 		t.Fatalf("got %d series, want 4", n)
+	}
+}
+
+// A rollout that keeps the image leaves the old ReplicaSet's manifest until Kubescape collects it. Its packages must
+// not count for the running container, which has the same workload, container and digest.
+func TestRefreshSkipsReplicaSetsWithoutPods(t *testing.T) {
+	instance := func(hash, cve string) Manifest {
+		l := workloadLabels("app", "web", "Deployment", "web")
+		l["kubescape.io/instance-template-hash"] = hash
+		return mf(true, digestA, "", l, match(cve, "Critical", "node", "22.20.0", "fixed", "22.23.4"))
+	}
+	list := func(context.Context) ([]Manifest, error) {
+		return []Manifest{instance("5d8", "CVE-2026-1"), instance("6f6", "CVE-2026-2")}, nil
+	}
+	cl := cluster(t, `,"x": []`)
+	snap, err := refresh(context.Background(), NewCollector(), list,
+		func(context.Context) (Cluster, error) { return cl, nil }, noSummaries, "medium", time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []RelevantVuln{{"app", "web", "Deployment", "web", digestA, "CVE-2026-1", "node", "22.20.0"}}
+	if !slices.Equal(snap.Relevant, want) {
+		t.Fatalf("relevant = %v, want %v", snap.Relevant, want)
 	}
 }
 
