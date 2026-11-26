@@ -6,7 +6,8 @@
     ":preserveSemverRanges",
     ":rebaseStalePrs",
     ":enableVulnerabilityAlertsWithLabel('security')",
-    "group:all"
+    "group:all",
+    ":disableDependencyDashboard"
   ],
   "customManagers": [
     {
