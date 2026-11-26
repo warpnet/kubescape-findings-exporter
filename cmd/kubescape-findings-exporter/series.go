@@ -15,6 +15,8 @@ const (
 	lblWorkload  = "kubescape.io/workload-name"
 	lblKind      = "kubescape.io/workload-kind"
 	lblContainer = "kubescape.io/workload-container-name"
+	// The pod-template-hash of a Deployment's ReplicaSet; empty for other kinds.
+	lblTemplateHash = "kubescape.io/instance-template-hash"
 )
 
 // ImageInfo marks an image (digest) as scanned.
@@ -67,6 +69,24 @@ type vulnKey struct{ digest, cve, pkg, version string }
 type vulnVal struct {
 	rank                          int
 	severity, fixedVersion, state string
+}
+
+// withoutIdleReplicaSets drops the relevancy manifests of Deployment ReplicaSets that have no pod. A rollout that keeps
+// the image leaves the old ReplicaSet's manifest until Kubescape collects it, and the packages that ReplicaSet loaded
+// would count for the running container: same workload, container and digest.
+// ponytail: Deployments only. StatefulSet and DaemonSet revisions carry no template hash label to match a pod on.
+func withoutIdleReplicaSets(ms []Manifest, pods []ObjectMeta) []Manifest {
+	running := map[string]bool{}
+	for _, p := range pods {
+		if kind, name, ok := controller(p); ok && kind == "ReplicaSet" {
+			running[key(p.Namespace, name)] = true
+		}
+	}
+	return slices.DeleteFunc(ms, func(m Manifest) bool {
+		l := m.Metadata.Labels
+		return m.Spec.Metadata.WithRelevancy && l[lblKind] == "Deployment" && l[lblTemplateHash] != "" &&
+			!running[key(l[lblNamespace], l[lblWorkload]+"-"+l[lblTemplateHash])]
+	})
 }
 
 // Build turns manifests into series. Manifests without a digest (host scans, for now) are skipped; matches below

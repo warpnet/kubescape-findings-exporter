@@ -25,7 +25,7 @@ func refresh(ctx context.Context, c *Collector, list func(context.Context) ([]Ma
 	if err != nil {
 		return Snapshot{}, err
 	}
-	snap := Build(ms, minSeverity)
+	snap := Build(withoutIdleReplicaSets(ms, cl.Pods), minSeverity)
 	snap.Exposures = BuildExposure(cl)
 	snap.Posture = BuildPosture(ss)
 	c.Set(snap, time.Now())
